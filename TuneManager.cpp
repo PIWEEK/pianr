@@ -1,11 +1,9 @@
-#include <SD.h>
-//#include <MemoryFree.h>
+#include <FileIO.h>
 #include "ABCNoteParser.h"
 #include "TuneManager.h"
 
 // File information
 File tuneFile;
-File root;
 
 // Buffered note storage/parsing
 ABCNoteParser* abcParser;
@@ -18,25 +16,14 @@ int tuneDur[MAX_NOTE_BUFFER];
 unsigned long previousMillis = 0;
 unsigned long interval = 0;
 
-TuneManager::TuneManager(char tuneFolderPath[]) {
+TuneManager::TuneManager() {
   Serial.println(F("Initializing TuneManager"));
   previousMillis = millis();
   abcParser = new ABCNoteParser();
 
-  // On the Ethernet Shield, CS is pin 4. It's set as an output by default.
-  // Note that even if it's not used as the CS pin, the hardware SS pin
-  // (10 on most Arduino boards, 53 on the Mega) must be left as an output
-  // or the SD library functions will not work.
-  pinMode(PIN_HARDWARE_SS, OUTPUT);
+  FileSystem.begin();
 
-  if (!SD.begin(PIN_CS)) {
-    Serial.println(F("SD Card Initialization Failed"));
-  } else {
-    Serial.println(F("SD Card Initialized Successfully"));
-  }
-
-  // Open the root folder so we can rely on 'openNextFile' for our playlist 'shuffle'
-  root = SD.open(tuneFolderPath);
+  File tuneFile = FileSystem.open("/song");
 }
 
 void TuneManager::addNotesToTune(Stream* str, int numOfNotesToAdd) {
@@ -71,34 +58,9 @@ void TuneManager::addNotesToTune(Stream* str, int numOfNotesToAdd) {
   }
 }
 
-/*
-int freeRam () {
-  extern int __heap_start, *__brkval;
-  int v;
-  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
-}
-*/
 
-// "Ensures" that the given file pointer will indeed point to a file, if one is available
-void TuneManager::ensureFile(File* file, File* rootToLoadFrom) {
-  if (!*file) {
-    // Proceed to the next song if it exists
-    *file = rootToLoadFrom->openNextFile();
-    // If we got a new tune, load up some notes from it
-    if (*file) {
-      Serial.print(F("Loaded next tune file: "));
-      Serial.println(file->name());
-      // Reset our parser to it's defaults (don't want previous songs settings)
-      abcParser->reset();
-      // Fill up our buffer with the initial set of music
-      this->addNotesToTune(file, MAX_NOTE_BUFFER);
-    }
-  }
-}
-
-void TuneManager::playTunes() {
-  // Make sure we have a song to play
-  this->ensureFile(&tuneFile, &root);
+void TuneManager::turnOnLeds() {
+  this->addNotesToTune(&tuneFile, MAX_NOTE_BUFFER);
 
   // play the song by iterating over the notes at given intervals:
   unsigned long currentMillis = millis();
@@ -113,8 +75,12 @@ void TuneManager::playTunes() {
       tempDur -= 10;
     }
 
-    // Play the note
-    tone(PIN_PEZO, tunePitch[readNoteIndex], tempDur);
+    // TODO!
+    // Turn on the led
+    // where tunePitch[readNoteIndex] is the pitch and tempDur is the duration;
+    // digitalWrite(led-que-sea, HIGH); // correspondiente con el tunePitch[readNoteIndex]
+    // delay(tempDur);
+    // digitalWrite(13, LOW);
 
     // Set how long to wait until next note
     interval = tuneDur[readNoteIndex];
