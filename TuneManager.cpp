@@ -108,7 +108,7 @@ void TuneManager::playTunes() {
     // Before playing, if this and the next notes are the same frequency, we need to manually
     // add a small break between the notes so they don't blend together
     int tempDur = tuneDur[readNoteIndex];
-    if (tunePitch[(readNoteIndex+1)%MAX_NOTE_BUFFER] == tuneFreq[readNoteIndex]) {
+    if (tunePitch[(readNoteIndex+1)%MAX_NOTE_BUFFER] == tunePitch[readNoteIndex]) {
       // Remove some milliseconds to the notes interval to create a short 'rest'
       tempDur -= 10;
     }
