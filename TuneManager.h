@@ -17,7 +17,7 @@ static const int MAX_NOTE_BUFFER = 100;
 class TuneManager {
   public:
     TuneManager();
-    void playTune(String path);
+    void turnOnLeds(String path);
   private:
     void addNotesToTune(Stream* str, int numOfNotesToAdd);
 };

@@ -10,7 +10,7 @@ void setup() {
   while (!Serial);
 
   songManager = new TuneManager();
-  songManager->playTune("/mnt/sd/SuperMarioTheme.abc");
+  songManager->turnOnLeds("/mnt/sd/SuperMarioTheme.abc");
 }
 
 void loop() {
