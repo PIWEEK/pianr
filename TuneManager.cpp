@@ -9,16 +9,30 @@ int writeNoteIndex = 0;
 int tunePitch[MAX_NOTE_BUFFER];
 int tuneDur[MAX_NOTE_BUFFER];
 
+File file;
+
 // Timing
 unsigned long previousMillis = 0;
 unsigned long interval = 0;
 
-TuneManager::TuneManager() {
+TuneManager::TuneManager(String path) {
   previousMillis = millis();
   abcParser = new ABCNoteParser();
+
+  char song[50];
+  path.toCharArray(song, 50);
+  FileSystem.begin();
+  file = FileSystem.open(song);
+
+  while (file.available()) {
+    Serial.write(file.read());
+  }
 }
 
 void TuneManager::addNotesToTune(Stream* str, int numOfNotesToAdd) {
+  Serial.print("in addNotesToTune; numOfNotesToAdd: ");
+  Serial.println(numOfNotesToAdd);
+
   for (int i=0; i<numOfNotesToAdd; i++) {
     // Immediately abort loading more notes if we have run out of space in the buffer
     if ((writeNoteIndex+1)%MAX_NOTE_BUFFER == readNoteIndex) return;
@@ -31,6 +45,10 @@ void TuneManager::addNotesToTune(Stream* str, int numOfNotesToAdd) {
 
       // get the next note using our parser
       abcParser->getNextNote(str, &nextNotePitch, &nextNoteDur);
+      Serial.print("getNextNote, notePitch, noteDur: ");
+      Serial.print(nextNotePitch);
+      Serial.print(" - ");
+      Serial.println(nextNoteDur);
 
       // Check to make sure that we have a note (in case it reached end of file)
       if (nextNoteDur != 0) {
@@ -50,18 +68,8 @@ void TuneManager::addNotesToTune(Stream* str, int numOfNotesToAdd) {
   }
 }
 
-void TuneManager::turnOnLeds(String path_song) {
-  Serial.println("turnOnLeds");
-
-  char song[50];
-  path_song.toCharArray(song, 50);
-
-  FileSystem.begin();
-  File file = FileSystem.open(song);
-
-  //while (file.available()) {
-  //  Serial.write(file.read());
-  //}
+void TuneManager::playTune() {
+  Serial.println("playTune");
 
   // Reset our parser to it's defaults (don't want previous songs settings)
   abcParser->reset();
@@ -93,7 +101,7 @@ void TuneManager::turnOnLeds(String path_song) {
     readNoteIndex = (readNoteIndex+1)%MAX_NOTE_BUFFER;
   } else {
     // If we can't play a note yet, might as well buffer some of the upcoming notes
-    //Serial.println("Not playing a note, so add to buffer");
+    Serial.println("Not playing a note, so add to buffer");
     addNotesToTune(&file, MIN_NOTE_BUFFER);
   }
 }
