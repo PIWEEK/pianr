@@ -8,12 +8,12 @@ float defaultNoteLength;
 long beatsPerMinute;
 long defaultNoteDuration;
 
-
 ABCNoteParser::ABCNoteParser() {
   reset();
 }
 
 void ABCNoteParser::reset() {
+  Serial.println("reset");
   inputChar = ' ';
   inBrackets = false;
   meterValue = 1.0f;
@@ -22,7 +22,7 @@ void ABCNoteParser::reset() {
   defaultNoteDuration = 0;
 }
 
-void ABCNoteParser::getNextNote(Stream* str, int* pitch, int* dur) {
+void ABCNoteParser::getNextNote(Stream* str, int* freq, int* dur) {
   while (true) {
     // Get the next char for next iteration if we haven't already got it
     // (sometimes we have already 'previewed' a char to check if the note is over or not)
@@ -161,10 +161,10 @@ void ABCNoteParser::getNextNote(Stream* str, int* pitch, int* dur) {
 
       default:
         // If not a header, treat it as a note
-        *pitch = getPitch(str, &inputChar);
+        *freq = getFrequency(str, &inputChar);
         // If we didn't successfully get a note,
         // reset our char and exit this loop's iteration
-        if (*pitch == -1) {
+        if (*freq == -1) {
           inputChar = ' ';
           continue;
         }
@@ -226,11 +226,13 @@ int ABCNoteParser::getDuration(Stream* stream, char* input) {
   return duration;
 }
 
-int ABCNoteParser::getPitch(Stream* stream, char* input) {
+int ABCNoteParser::getFrequency(Stream* stream, char* input) {
   // setup some note-specific defaults first
-  int pitch = -1;
+  boolean sharpIndicator = false;
+  boolean flatIndicator = false;
+  int noteFreqIndex = -1;
 
-  // Get the sharp/flat modifier
+  // Get the sharp/flat modifier (will recognize but pass over doubles)
   while (*input == '^') {
     sharpIndicator = true;
     *input = stream->read();
@@ -242,63 +244,74 @@ int ABCNoteParser::getPitch(Stream* stream, char* input) {
 
   // Get the note (CDEFGAB)
   if (*input == 'z') {
-    pitch = 0;
+    noteFreqIndex = 0;
   } else if (*input == 'C') {
-    pitch = 13
+    noteFreqIndex = 13;
   } else if (*input == 'D') {
-    pitch = 15
+    noteFreqIndex = 15;
   } else if (*input == 'E') {
-    pitch = 17
+    noteFreqIndex = 17;
   } else if (*input == 'F') {
-    pitch = 18
+    noteFreqIndex = 18;
   } else if (*input == 'G') {
-    pitch = 20
+    noteFreqIndex = 20;
   } else if (*input == 'A') {
-    pitch = 22
+    noteFreqIndex = 22;
   } else if (*input == 'B') {
-    pitch = 24
+    noteFreqIndex = 24;
   } else if (*input == 'c') {
-    pitch = 25
+    noteFreqIndex = 25;
   } else if (*input == 'd') {
-    pitch = 27
+    noteFreqIndex = 27;
   } else if (*input == 'e') {
-    pitch = 29
+    noteFreqIndex = 29;
   } else if (*input == 'f') {
-    pitch = 30
+    noteFreqIndex = 30;
   } else if (*input == 'g') {
-    pitch = 32
+    noteFreqIndex = 32;
   } else if (*input == 'a') {
-    pitch = 34
+    noteFreqIndex = 34;
   } else if (*input == 'b') {
-    pitch = 36
+    noteFreqIndex = 36;
   }
 
   // If, for whatever reason, we still don't have a note, exit with a failure
-  if (pitch == -1) return -1;
+  if (noteFreqIndex == -1) return -1;
 
   *input = stream->read();
 
   // Get the octave modifier (optional)
   if (*input == '\'') {
     // Apostrophe ' puts the note up an octave
-    pitch += 12;
+    noteFreqIndex += 12;
     *input = stream->read();
   }
   if (*input == ',') {
     // Comma , puts the note down an octave
-    pitch -= 12;
+    noteFreqIndex -= 12;
     *input = stream->read();
   }
 
   // Check the sharp/flat modifier
   if (sharpIndicator) {
-    pitch += 1;
+    noteFreqIndex += 1;
   }
   if (flatIndicator) {
-    pitch -= 1;
+    noteFreqIndex -= 1;
   }
 
-  return pitch;
+  return noteFreqIndex;
+
+
+  /*
+  // Take our note frequency info and get the actual frequency
+  if (flatIndicator) {
+    // Flats can also become the below notes sharp freq
+    sharpIndicator = true;
+    noteFreqIndex = max(noteFreqIndex-1,0);
+  }
+  return frequencies[noteFreqIndex][sharpIndicator ? 1 : 0];
+  */
 }
 
 void ABCNoteParser::skipCharacters(Stream* stream, char* input, char* skipChars) {
