@@ -1,6 +1,7 @@
 #include <TuneManager.h>
 #include <ABCNoteParser.h>
 #include <FileIO.h>
+#include <Bridge.h>
 
 TuneManager* songManager;
 
@@ -9,10 +10,10 @@ void setup() {
   Serial.begin(9600);
   while (!Serial);
   songManager = new TuneManager("/mnt/sd/SuperMarioTheme.abc");
-  
+
 }
 
-void loop() {  
+void loop() {
   songManager->playTune();
   delay(2000);
   /*

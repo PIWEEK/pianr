@@ -9,24 +9,31 @@ int writeNoteIndex = 0;
 int tunePitch[MAX_NOTE_BUFFER];
 int tuneDur[MAX_NOTE_BUFFER];
 
-File file;
-
 // Timing
 unsigned long previousMillis = 0;
 unsigned long interval = 0;
+
+File *file;
+
 
 TuneManager::TuneManager(String path) {
   previousMillis = millis();
   abcParser = new ABCNoteParser();
 
+  // Reset our parser to it's defaults (don't want previous songs settings)
+  //abcParser->reset();
+
   char song[50];
   path.toCharArray(song, 50);
   FileSystem.begin();
-  file = FileSystem.open(song);
+  File tempFile = FileSystem.open(song);
+  file = &tempFile;
+  //while (file->available()) {
+  //  Serial.write(file->read());
+  //}
 
-  while (file.available()) {
-    Serial.write(file.read());
-  }
+  // Fill up our buffer with the initial set of music
+  this->addNotesToTune(file, MAX_NOTE_BUFFER);
 }
 
 void TuneManager::addNotesToTune(Stream* str, int numOfNotesToAdd) {
@@ -71,11 +78,6 @@ void TuneManager::addNotesToTune(Stream* str, int numOfNotesToAdd) {
 void TuneManager::playTune() {
   Serial.println("playTune");
 
-  // Reset our parser to it's defaults (don't want previous songs settings)
-  abcParser->reset();
-  // Fill up our buffer with the initial set of music
-  this->addNotesToTune(&file, MAX_NOTE_BUFFER);
-
   // play the song by iterating over the notes at given intervals:
   unsigned long currentMillis = millis();
   if (readNoteIndex != writeNoteIndex && (currentMillis - previousMillis > interval) ) {
@@ -102,6 +104,6 @@ void TuneManager::playTune() {
   } else {
     // If we can't play a note yet, might as well buffer some of the upcoming notes
     Serial.println("Not playing a note, so add to buffer");
-    addNotesToTune(&file, MIN_NOTE_BUFFER);
+    this->addNotesToTune(file, MIN_NOTE_BUFFER);
   }
 }
