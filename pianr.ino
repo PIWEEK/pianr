@@ -2,10 +2,6 @@
 #include <FileIO.h>
 #include <Adafruit_NeoPixel.h>
 
-#ifdef __AVR__
-  #include <avr/power.h>
-#endif
-
 Adafruit_NeoPixel pixels_11 = Adafruit_NeoPixel(11, 11, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel pixels_12 = Adafruit_NeoPixel(10, 12, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel pixels_13 = Adafruit_NeoPixel(11, 13, NEO_GRB + NEO_KHZ800);
@@ -14,6 +10,9 @@ File *file;
 ABCNoteParser* abcParser;
 int notePitch;
 int noteDur;
+int noteNextPitch;
+int noteNextDur;
+int noteTmpDur;
 
 int keys[38][2] = {
     {},       // pos0
@@ -56,24 +55,26 @@ int keys[38][2] = {
     {13, 4},  // pos37
 };
 
-
-
-
-
 void setup() {
   Bridge.begin();
   Serial.begin(9600);
-  while (!Serial);
   FileSystem.begin();
 
   pixels_11.begin();
-  //pixels_11.clear();
-  pixels_12.begin();
-  //pixels_12.clear();
-  pixels_13.begin();
-  //pixels_13.clear();
+  pixels_11.show();
 
-  play("/mnt/sd/SuperMarioTheme.abc");
+  pixels_12.begin();
+  pixels_12.show();
+
+  pixels_13.begin();
+  pixels_13.show();
+
+  pixels_11.setBrightness(64);
+  pixels_12.setBrightness(64);
+  pixels_13.setBrightness(64);
+  
+  
+  play("/mnt/sd/twinkle_little_star.abc");
 
 }
 
@@ -82,53 +83,65 @@ void loop() {
 
 
 void play(String path){
-  Serial.print(path);
-  Serial.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-  char song[50];
-  path.toCharArray(song, 50);
+
   notePitch = 0;
   noteDur = 0;
+  noteNextPitch = 0;
+  noteNextDur = 0;
+  noteTmpDur = 0;
+
+  Serial.print(path);
+  Serial.println(" ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+
+  char song[50];
+  path.toCharArray(song, 50);
+
   abcParser->reset();
   File tmpFile = FileSystem.open(song);
   file = &tmpFile;
+
+  abcParser->getNextNote(file, &notePitch, &noteDur);
+
   while(file->available()){
-    abcParser->getNextNote(file, &notePitch, &noteDur);
+    abcParser->getNextNote(file, &noteNextPitch, &noteNextDur);
+
+    if(notePitch == noteNextPitch){
+      noteDur -= 300;
+      noteTmpDur = 300;
+    }
 
     Serial.print("notePitch: ");
     Serial.print(notePitch);
     Serial.print(" noteDur: ");
     Serial.println(noteDur);
 
-    pixels_11.clear();
-    pixels_12.clear();
-    pixels_13.clear();
-
     if(notePitch > 5 && notePitch < 17){
-      pixels_11.setPixelColor(keys[notePitch][1], pixels_11.Color(0,150,0));
+      pixels_11.setPixelColor(keys[notePitch][1], pixels_11.Color(0,50,0));
       pixels_11.show();
       delay(noteDur);
-      pixels_11.clear();
+      pixels_11.setPixelColor(keys[notePitch][1], 0);
+      pixels_11.show();
 
     } else if (notePitch > 16 && notePitch < 27) {
-      pixels_12.setPixelColor(keys[notePitch][1], pixels_12.Color(0,150,0));
+      pixels_12.setPixelColor(keys[notePitch][1], pixels_12.Color(0,50,0));
       pixels_12.show();
       delay(noteDur);
-      pixels_12.clear();
+      pixels_12.setPixelColor(keys[notePitch][1], 0);
+      pixels_12.show();
 
     } else if (notePitch > 26 && notePitch < 38) {
-      pixels_13.setPixelColor(keys[notePitch][1], pixels_13.Color(0,150,0));
+      pixels_13.setPixelColor(keys[notePitch][1], pixels_13.Color(0,50,0));
       pixels_13.show();
       delay(noteDur);
-      pixels_13.clear();
+      pixels_13.setPixelColor(keys[notePitch][1], 0);
+      pixels_13.show();
 
     }
-    delay(1000);
+    notePitch = noteNextPitch;
+    noteDur = noteNextDur;
+    delay(noteTmpDur);
+    noteTmpDur = 0;
   }
-  Serial.println("---------------------------------------------------------------------------------");
   file->close();
+  Serial.println("---------------------------------------------------------------------------------");
 }
-
-
-
-
-
